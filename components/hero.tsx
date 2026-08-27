@@ -78,7 +78,7 @@ export function Hero() {
             width={1024}
             height={1024}
             priority
-            className="absolute left-[0%] top-[0%] w-[100%] max-w-none"
+            className="absolute left-[0%] top-[-5%] w-[125%] max-w-none"
           />
         </div>
       </div>
