@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const OWNER_IP = '87.246.155.39'
-const COOKIE_NAME = 'zip_owner_access'
+const COOKIE_NAME = 'zip_access_9c2'
 
-function getClientIp(request: NextRequest) {
+export function getClientIp(request: NextRequest) {
   const forwarded = request.headers.get('x-forwarded-for')
-  return forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || ''
+  return forwarded?.split(',').at(-1)?.trim() || request.headers.get('x-real-ip') || ''
 }
 
 export function isOwnerRequest(request: NextRequest) {
   const token = process.env.OWNER_PORTAL_TOKEN
   if (!token) return false
   return getClientIp(request) === OWNER_IP && request.cookies.get(COOKIE_NAME)?.value === token
+}
+
+export function isValidCredentials(firstSecret: string, secondSecret: string) {
+  return Boolean(
+    firstSecret &&
+      secondSecret &&
+      firstSecret === process.env.OWNER_PORTAL_TOKEN &&
+      secondSecret === process.env.ZIP_GATE_PASS_7F3A9C,
+  )
 }
 
 export function ownerDenied(request: NextRequest) {
@@ -27,7 +36,7 @@ export function setOwnerCookie(response: NextResponse) {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    path: '/owner',
+    path: '/',
     maxAge: 60 * 60 * 8,
   })
   return response
