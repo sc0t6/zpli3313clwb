@@ -1,0 +1,67 @@
+name: Deploy public site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # This flag enables Next's static export. No Vercel secrets are used here.
+      GITHUB_PAGES: 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      # Next static export cannot include server route handlers. Build a clean
+      # public-only copy so the Vercel owner portal never enters the artifact.
+      - name: Create public build workspace
+        run: |
+          mkdir -p ../zipclient-pages
+          cp -a . ../zipclient-pages
+          rm -rf ../zipclient-pages/app/api ../zipclient-pages/app/owner
+          rm -f ../zipclient-pages/lib/owner-auth.ts
+      - name: Install dependencies
+        working-directory: ../zipclient-pages
+        run: pnpm install --frozen-lockfile
+      - name: Build static site
+        working-directory: ../zipclient-pages
+        run: pnpm build
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ../zipclient-pages/out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+# The public site is static on GitHub Pages at zipclient.lol.
+# /owner/releases and /api/owner/* remain on the separate Vercel deployment.
+# Never add BLOB_READ_WRITE_TOKEN or OWNER_PORTAL_TOKEN to this workflow.
